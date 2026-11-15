@@ -3,28 +3,12 @@
 #   git pull && docker compose -f docker-compose.prod.yml up -d --build
 # (dịch vụ migrate tự cập nhật bảng trước khi app khởi động). Hướng dẫn: deploy/README.md
 #
-# Chỉ Caddy mở cổng ra internet (80, 443). Postgres, MinIO, app nói chuyện qua mạng nội bộ Docker.
+# Nginx cài trên máy (dùng chung với các dự án khác) giữ cổng 80/443 và HTTPS, chuyển vào:
+#   abcd.io.vn       → 127.0.0.1:8120 (app)
+#   files.abcd.io.vn → 127.0.0.1:8121 (MinIO)
+# Hai cổng chỉ mở cho 127.0.0.1, bên ngoài không vào thẳng được. Cấu hình Nginx: deploy/nginx-gospeak.conf
 
 services:
-  caddy:
-    image: caddy:2.10-alpine
-    container_name: gospeak-caddy
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-    environment:
-      APP_DOMAIN: ${APP_DOMAIN}
-      FILES_DOMAIN: ${FILES_DOMAIN}
-    volumes:
-      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      - app
-      - minio
-
   app:
     build:
       context: .
@@ -32,6 +16,8 @@ services:
     image: gospeak-app
     container_name: gospeak-app
     restart: unless-stopped
+    ports:
+      - "127.0.0.1:8120:3000"
     environment:
       DATABASE_URL: postgresql://gospeak:${POSTGRES_PASSWORD}@postgres:5432/gospeak?schema=public
       AUTH_SECRET: ${AUTH_SECRET}
@@ -100,6 +86,8 @@ services:
     container_name: gospeak-minio
     restart: unless-stopped
     command: server /data
+    ports:
+      - "127.0.0.1:8121:9000"
     environment:
       MINIO_ROOT_USER: gospeak
       MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD}
@@ -116,5 +104,3 @@ services:
 volumes:
   postgres_data:
   minio_data:
-  caddy_data:
-  caddy_config:
