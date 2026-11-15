@@ -26,11 +26,12 @@ trang web cũ vẫn chạy trong lúc build. Thỉnh thoảng dọn ảnh cũ: `
 
 ### 1. Trỏ tên miền
 
-Trang quản trị tên miền → **Bản ghi DNS** → **Tạo bản ghi**, thêm 2 bản ghi (giữ nguyên bản ghi NS):
+Trang quản trị tên miền → **Bản ghi DNS** → **Tạo bản ghi**, thêm 3 bản ghi (giữ nguyên bản ghi NS):
 
 | Host    | Loại | Giá trị         | TTL  |
 |---------|------|-----------------|------|
 | `@`     | A    | `103.77.209.28` | 3600 |
+| `www`   | A    | `103.77.209.28` | 3600 |
 | `files` | A    | `103.77.209.28` | 3600 |
 
 Kiểm tra: `nslookup abcd.io.vn` và `nslookup files.abcd.io.vn` đều trả về `103.77.209.28`.

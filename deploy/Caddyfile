@@ -6,6 +6,11 @@
 	reverse_proxy app:3000
 }
 
+# Gõ www thì chuyển về tên miền chính (cần bản ghi DNS www trỏ cùng IP)
+www.{$APP_DOMAIN} {
+	redir https://{$APP_DOMAIN}{uri} permanent
+}
+
 # File ghi âm, ảnh vở, ảnh câu hỏi — trình duyệt đọc/ghi thẳng bằng URL có chữ ký.
 {$FILES_DOMAIN} {
 	request_body {
