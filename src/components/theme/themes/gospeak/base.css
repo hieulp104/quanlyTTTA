@@ -1,0 +1,423 @@
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-weight: var(--font-weight-normal);
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "kern" 1, "liga" 1;
+}
+
+::selection {
+  background: var(--color-brand-200);
+  color: var(--color-brand-950);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+[data-lucide] {
+  stroke-width: 1.8;
+}
+
+.brand-gradient {
+  background: var(--theme-brand-gradient);
+  border-right: 1px solid var(--theme-color-sidebar-line);
+}
+
+.auth-brand-panel {
+  position: absolute;
+  inset: 0;
+  isolation: isolate;
+  overflow: hidden;
+  /* GoSpeak: nền đỏ thương hiệu + hai vòng tròn như trang giới thiệu */
+  background:
+    radial-gradient(circle at 78% 18%, rgb(255 255 255 / 0.1) 0 120px, transparent 121px),
+    radial-gradient(circle at 6% 92%, rgb(0 0 0 / 0.1) 0 180px, transparent 181px),
+    linear-gradient(145deg, #a90d27 0%, #c8102e 60%, #da2a46 100%);
+}
+
+.auth-brand-panel::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  content: "";
+  /* Dải mờ dần sang trắng ở mép phải để thẻ đăng nhập nổi trên nền sáng */
+  background: linear-gradient(90deg, transparent 0%, transparent 52%, rgb(255 255 255 / 0.85) 70%, #fff 80%);
+}
+
+.auth-brand-panel::after {
+  position: absolute;
+  inset: auto -18% -28% 16%;
+  z-index: -1;
+  height: 52%;
+  content: "";
+  border-radius: var(--radius-full);
+  background: var(--theme-auth-glow);
+  filter: blur(64px);
+}
+
+.auth-brand-illustration {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  filter: saturate(0.76) contrast(0.92);
+  mask-image: linear-gradient(
+    90deg,
+    #000 0%,
+    #000 42%,
+    rgb(0 0 0 / 0.82) 58%,
+    transparent 82%
+  );
+  transform: scale(1.01);
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    #000 0%,
+    #000 42%,
+    rgb(0 0 0 / 0.82) 58%,
+    transparent 82%
+  );
+}
+
+.gospeak-login-experience {
+  position: relative;
+  min-height: 100dvh;
+  background: var(--theme-login-backdrop);
+}
+
+.gospeak-login-experience > main {
+  min-height: 100dvh;
+  background: var(--theme-login-backdrop);
+}
+
+.gospeak-login-form-panel {
+  position: relative;
+  background: transparent;
+}
+
+.gospeak-login-form-card {
+  border: 1px solid var(--theme-color-line);
+  border-radius: var(--radius-card);
+  background: color-mix(in srgb, var(--theme-color-surface) 94%, transparent);
+  box-shadow: var(--theme-shadow-dialog);
+  backdrop-filter: blur(12px);
+}
+
+.scrollbar-hidden {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
+.dialog-backdrop {
+  animation: gospeak-fade-in var(--theme-motion-duration-default)
+    var(--theme-motion-easing-standard);
+}
+
+.dialog-panel {
+  animation: gospeak-dialog-in var(--theme-motion-duration-layout)
+    var(--theme-motion-easing-standard);
+}
+
+@keyframes gospeak-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes gospeak-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.99);
+  }
+}
+
+/* ── Chuyển động dùng chung (trang giới thiệu + cổng học tập) ── */
+:root {
+  interpolate-size: allow-keywords;
+}
+
+/* Bong bóng hội thoại ở hero "bật" ra từ phía đuôi bong bóng */
+.gs-pop {
+  transform-origin: 12% 100%;
+  animation: gs-pop 620ms cubic-bezier(0.2, 1.35, 0.4, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+
+/* Xuất hiện lần lượt lúc tải trang: đặt --d để lệch nhịp */
+.gs-rise {
+  animation: gs-rise 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+
+/* Vệt bút dạ vàng tô sau chữ, tự quét sau khi bong bóng hiện */
+.gs-underline path {
+  fill: none;
+  stroke: var(--color-wood-300);
+  stroke-width: 11;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: gs-draw 700ms 650ms cubic-bezier(0.6, 0, 0.2, 1) forwards;
+}
+
+/* Ảnh polaroid trôi nhẹ — dùng translate riêng để không đè lên rotate */
+.gs-float {
+  animation: gs-float 6s ease-in-out infinite;
+  animation-delay: var(--d, 0ms);
+}
+
+/* Mảng sáng/tối trên nền đỏ ở hero trôi chậm qua lại */
+.gs-drift {
+  animation: gs-drift 16s ease-in-out infinite alternate;
+  animation-delay: var(--d, 0ms);
+}
+
+/* Thanh tiến độ / thanh kỹ năng chạy từ 0 */
+.gs-grow {
+  animation: gs-grow 900ms 150ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* Hiện dần khi cuộn tới — chỉ chạy ở trình duyệt hỗ trợ, còn lại hiển thị bình thường */
+@supports (animation-timeline: view()) {
+  .gs-reveal {
+    animation: gs-rise linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 45%;
+  }
+}
+
+/* Dải câu tiếng Anh chạy ngang dưới hero — rê chuột vào thì dừng */
+.gs-marquee {
+  display: flex;
+  width: max-content;
+  animation: gs-marquee 45s linear infinite;
+}
+
+.gs-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* Chọn sai: ô đáp án lắc nhẹ */
+.gs-shake {
+  animation: gs-shake 380ms cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+/* Nhãn "bấm thử" lắc lư gọi sự chú ý */
+.gs-wiggle {
+  transform-origin: 10% 100%;
+  animation: gs-wiggle 3.2s ease-in-out infinite;
+}
+
+/* Gạch chân trượt ra khi rê chuột vào menu */
+.gs-navlink {
+  position: relative;
+}
+
+.gs-navlink::after {
+  position: absolute;
+  inset: auto 0.75rem 0.25rem;
+  height: 2px;
+  content: "";
+  border-radius: 2px;
+  background: var(--color-primary);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.gs-navlink:hover::after,
+.gs-navlink:focus-visible::after {
+  transform: scaleX(1);
+}
+
+/* Hỏi đáp mở/đóng mượt */
+.gs-faq::details-content {
+  block-size: 0;
+  overflow: clip;
+  opacity: 0;
+  transition:
+    block-size 260ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 200ms,
+    content-visibility 260ms allow-discrete;
+}
+
+.gs-faq[open]::details-content {
+  block-size: auto;
+  opacity: 1;
+}
+
+@keyframes gs-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(14px);
+  }
+}
+
+@keyframes gs-rise {
+  from {
+    opacity: 0;
+    translate: 0 18px;
+  }
+}
+
+@keyframes gs-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes gs-float {
+  50% {
+    translate: 0 -14px;
+  }
+}
+
+@keyframes gs-drift {
+  to {
+    translate: 70px 40px;
+    scale: 1.18;
+  }
+}
+
+@keyframes gs-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes gs-shake {
+  20%,
+  60% {
+    translate: -5px 0;
+  }
+
+  40%,
+  80% {
+    translate: 5px 0;
+  }
+}
+
+@keyframes gs-wiggle {
+  0%,
+  70%,
+  100% {
+    rotate: -4deg;
+  }
+
+  78%,
+  90% {
+    rotate: 3deg;
+  }
+
+  84% {
+    rotate: -8deg;
+  }
+}
+
+@keyframes gs-grow {
+  from {
+    width: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gs-reveal,
+  .gs-float,
+  .gs-drift,
+  .gs-wiggle,
+  .gs-marquee {
+    animation: none !important;
+  }
+
+  .gs-underline path {
+    stroke-dashoffset: 0;
+  }
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (min-width: 768px) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--theme-scrollbar-thumb) var(--theme-scrollbar-track);
+  }
+}
+
+@media (max-width: 1023px) {
+  .auth-brand-panel {
+    padding: 0;
+  }
+
+  .auth-brand-panel::before {
+    background: color-mix(
+      in srgb,
+      var(--theme-color-background) 52%,
+      transparent
+    );
+  }
+
+  .auth-brand-panel::after {
+    display: none;
+  }
+
+  .auth-brand-illustration {
+    background-position: center;
+    filter: saturate(0.58) contrast(0.9);
+    mask-image: linear-gradient(
+      90deg,
+      #000 0%,
+      rgb(0 0 0 / 0.78) 62%,
+      rgb(0 0 0 / 0.42) 100%
+    );
+    transform: none;
+    -webkit-mask-image: linear-gradient(
+      90deg,
+      #000 0%,
+      rgb(0 0 0 / 0.78) 62%,
+      rgb(0 0 0 / 0.42) 100%
+    );
+  }
+
+  .gospeak-login-form-panel {
+    min-height: 100dvh;
+    padding: 4.75rem 1rem 2rem;
+  }
+
+  .gospeak-login-form-card {
+    max-width: 27rem;
+    padding: 1.75rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .auth-brand-panel {
+    padding: clamp(2.75rem, 4vw, 4.5rem);
+  }
+
+  .gospeak-login-form-panel {
+    width: 44%;
+    padding: 3rem clamp(2.5rem, 5vw, 5.5rem);
+  }
+
+  .gospeak-login-form-card {
+    max-width: 27rem;
+    padding: clamp(2rem, 3vw, 2.5rem);
+  }
+}

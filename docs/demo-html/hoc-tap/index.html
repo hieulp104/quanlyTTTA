@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Đăng nhập – Cổng học tập GoSpeak</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#c8102e">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23c8102e'/%3E%3Ctext x='32' y='46' font-family='Arial Black,Arial' font-weight='900' font-size='40' fill='white' text-anchor='middle'%3ES%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<body class="login-page">
+  <main class="login">
+    <section class="login-side">
+      <a class="brand" href="../index.html">
+        <span class="brand-mark"><svg viewBox="0 0 42 42" width="42" height="42" aria-hidden="true"><text x="21" y="31" text-anchor="middle" font-family="Baloo 2, Arial Black" font-weight="800" font-size="30" fill="#fff">S</text></svg></span>
+        <span class="brand-name" style="color:#fff">GoSpeak<small style="color:rgba(255,255,255,.7)">CỔNG HỌC TẬP</small></span>
+      </a>
+      <h1>Hello! Hôm nay mình học gì nào?</h1>
+      <p>Học viên làm bài tập, giáo viên giao và chấm bài, phụ huynh xem điểm và nhận xét của con. Cả 2 cơ sở dùng chung một hệ thống.</p>
+      <div class="login-doodle" aria-hidden="true">🎧 ✏️ 🎙️ 🧩</div>
+    </section>
+
+    <section class="login-main">
+      <h2>Đăng nhập</h2>
+      <div class="role-tabs" role="tablist" aria-label="Chọn vai trò">
+        <button role="tab" data-role="student" aria-selected="true">🧒 Học viên</button>
+        <button role="tab" data-role="parent" aria-selected="false">👨‍👩‍👧 Phụ huynh</button>
+        <button role="tab" data-role="teacher" aria-selected="false">👩‍🏫 Giáo viên</button>
+        <button role="tab" data-role="admin" aria-selected="false">🏫 Quản lý</button>
+      </div>
+      <form id="loginForm" novalidate>
+        <label class="field"><span id="userLabel">Mã học viên</span><input class="input" id="user" autocomplete="username" required></label>
+        <label class="field"><span>Mật khẩu</span><input class="input" id="pass" type="password" autocomplete="current-password" required></label>
+        <p class="hint" id="loginErr" role="alert" style="color:var(--red);min-height:1.2em"></p>
+        <button class="btn btn-primary btn-lg" style="width:100%" type="submit">Đăng nhập</button>
+      </form>
+
+      <div class="demo-box">
+        <b>Tài khoản dùng thử</b> (mật khẩu đều là <code>123456</code>)
+        <div class="demo-accounts">
+          <button data-demo="student" data-u="hv001">🧒 Học viên<br><small>hv001</small></button>
+          <button data-demo="parent" data-u="0912345678">👨‍👩‍👧 Phụ huynh<br><small>0912345678</small></button>
+          <button data-demo="teacher" data-u="cogiao">👩‍🏫 Giáo viên<br><small>cogiao</small></button>
+          <button data-demo="admin" data-u="admin">🏫 Quản lý<br><small>admin</small></button>
+        </div>
+      </div>
+      <p class="hint" style="margin-top:18px"><a href="../index.html">Về trang giới thiệu trung tâm</a></p>
+    </section>
+  </main>
+
+  <script src="../assets/js/store.js"></script>
+  <script>
+    (function () {
+      const db = GS.load();
+      const labels = { student: "Mã học viên", parent: "Số điện thoại phụ huynh", teacher: "Tên đăng nhập giáo viên", admin: "Tên đăng nhập quản lý" };
+      let role = "student";
+      const tabs = document.querySelectorAll("[data-role]");
+      function setRole(r) {
+        role = r;
+        tabs.forEach((t) => t.setAttribute("aria-selected", t.dataset.role === r));
+        document.getElementById("userLabel").textContent = labels[r];
+        document.getElementById("loginErr").textContent = "";
+      }
+      tabs.forEach((t) => t.addEventListener("click", () => setRole(t.dataset.role)));
+
+      function login(r, u, p) {
+        const err = document.getElementById("loginErr");
+        if (p !== "123456") { err.textContent = "Mật khẩu chưa đúng. Bản demo dùng mật khẩu 123456."; return; }
+        u = u.trim().toLowerCase();
+        let id = null;
+        if (r === "student") id = (db.students.find((s) => s.code === u) || {}).id;
+        if (r === "parent") { const p = u.replace(/\D/g, ""); id = (db.students.find((s) => s.parentPhone === p) || {}).id; }
+        if (r === "teacher") id = (db.teachers.find((t) => t.username === u) || {}).id;
+        if (r === "admin" && u === "admin") id = "admin";
+        if (!id) { err.textContent = "Không tìm thấy tài khoản " + labels[r].toLowerCase() + " này."; return; }
+        GS.setSession({ role: r, id });
+        location.href = "app.html";
+      }
+      document.getElementById("loginForm").addEventListener("submit", (e) => {
+        e.preventDefault();
+        login(role, document.getElementById("user").value, document.getElementById("pass").value);
+      });
+      document.querySelectorAll("[data-demo]").forEach((b) => b.addEventListener("click", () => {
+        setRole(b.dataset.demo);
+        document.getElementById("user").value = b.dataset.u;
+        document.getElementById("pass").value = "123456";
+        login(b.dataset.demo, b.dataset.u, "123456");
+      }));
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,430 @@
+// ═══════════════════════════════════════════════════════════════════
+// GOSPEAK ENGLISH — Website giới thiệu + cổng học tập (giao bài, chấm bài, phụ huynh)
+// Quy ước giống dự án QLNS: model PascalCase · bảng snake_case qua @@map · enum SCREAMING_SNAKE
+// Xem CLAUDE.md mục "Quyết định schema" trước khi sửa.
+// ═══════════════════════════════════════════════════════════════════
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ═══════════════════ ENUMS ═══════════════════
+
+/// Phạm vi áp dụng của một quyền.
+/// ALL = toàn trung tâm · CAMPUS = cơ sở của mình · ASSIGNED = lớp mình dạy · SELF = của chính mình / con mình
+enum PermissionScope {
+  ALL
+  CAMPUS
+  ASSIGNED
+  SELF
+}
+
+/// Loại tài khoản: nhân sự trung tâm, học viên, phụ huynh.
+enum UserType {
+  STAFF
+  STUDENT
+  PARENT
+}
+
+/// 8 dạng bài tập (trả lời câu 1 của trung tâm, tách "nhìn hình" thành chọn + nối).
+enum QuestionType {
+  MCQ // Chọn đáp án đúng A/B/C/D
+  FILL // Điền từ còn thiếu
+  PICTURE // Nhìn hình chọn từ
+  MATCH // Nối hình với từ
+  LISTEN // Nghe rồi trả lời
+  ORDER // Sắp xếp từ thành câu
+  SPEAK // Đọc to, ghi âm — giáo viên chấm
+  WRITE // Viết đoạn văn / chụp ảnh vở — giáo viên chấm
+}
+
+/// Kỹ năng — dùng để phân tích "bé hay sai phần nào".
+enum Skill {
+  LISTENING
+  SPEAKING
+  READING
+  WRITING
+  VOCABULARY
+  GRAMMAR
+}
+
+/// Bài do giáo viên soạn trên web hay học vụ nhập từ file Word/PDF của trung tâm.
+enum AssignmentSource {
+  WEB
+  FILE
+}
+
+enum ImportRequestStatus {
+  PENDING
+  DONE
+}
+
+/// Trạng thái chăm sóc phụ huynh đăng ký học thử.
+enum LeadStatus {
+  NEW
+  CALLED
+  TRIAL_BOOKED
+  ENROLLED
+  DROPPED
+}
+
+/// Bài đăng hiện trên trang giới thiệu.
+enum PostKind {
+  OPENING // Lịch khai giảng
+  EVENT // Sự kiện
+  NEWS // Tin tức / góc phụ huynh
+}
+
+// ═══════════════════ TÀI KHOẢN & PHÂN QUYỀN ═══════════════════
+
+model User {
+  id                 String    @id @default(cuid())
+  /// Tên đăng nhập: nhân sự tự đặt, học viên = mã HV (hv001), phụ huynh = SĐT.
+  username           String    @unique
+  fullName           String    @map("full_name")
+  phone              String?
+  passwordHash       String    @map("password_hash")
+  userType           UserType  @default(STAFF) @map("user_type")
+  /// Cơ sở chính của nhân sự — dùng cho scope CAMPUS. Học viên/phụ huynh để trống.
+  campusId           String?   @map("campus_id")
+  isActive           Boolean   @default(true) @map("is_active")
+  mustChangePassword Boolean   @default(false) @map("must_change_password")
+  lastLoginAt        DateTime? @map("last_login_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+  deletedAt          DateTime? @map("deleted_at")
+
+  campus          Campus?         @relation(fields: [campusId], references: [id])
+  roles           UserRole[]
+  teachingClasses ClassGroup[]    @relation("ClassTeacher")
+  studentProfile  Student?        @relation("StudentAccount")
+  children        Student[]       @relation("StudentParent")
+  assignments     Assignment[]    @relation("AssignmentAuthor")
+  gradedSubs      Submission[]    @relation("SubmissionGrader")
+  importRequests  ImportRequest[]
+  posts           Post[]
+  auditLogs       AuditLog[]
+
+  @@index([userType])
+  @@map("users")
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  code        String   @unique // ADMIN, ACADEMIC, TEACHER, PARENT, STUDENT
+  name        String
+  description String?
+  isSystem    Boolean  @default(false) @map("is_system")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  users       UserRole[]
+  permissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  code        String   @unique // "assignment.manage", "grading.manage"...
+  module      String
+  name        String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  roles RolePermission[]
+
+  @@index([module])
+  @@map("permissions")
+}
+
+model UserRole {
+  userId     String   @map("user_id")
+  roleId     String   @map("role_id")
+  assignedAt DateTime @default(now()) @map("assigned_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+/// Nguồn chân lý về quyền lúc chạy — DEFAULT_ROLE_GRANTS chỉ dùng khi seed.
+model RolePermission {
+  roleId       String          @map("role_id")
+  permissionId String          @map("permission_id")
+  scope        PermissionScope @default(ALL)
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+// ═══════════════════ CƠ SỞ · LỚP · HỌC VIÊN ═══════════════════
+
+/// 2 cơ sở quản lý chung một hệ thống (câu 6).
+model Campus {
+  id        String   @id @default(cuid())
+  code      String   @unique // CS1, CS2
+  name      String
+  address   String
+  phone     String
+  hours     String
+  mapUrl    String?  @map("map_url")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  users   User[]
+  classes ClassGroup[]
+  leads   Lead[]
+  posts   Post[]
+
+  @@map("campuses")
+}
+
+/// Lớp học. Đặt tên ClassGroup để tránh nhầm với từ khóa `class`.
+model ClassGroup {
+  id        String    @id @default(cuid())
+  code      String    @unique // STA-1A
+  name      String // Starters 1A
+  level     String // Thiếu nhi 6–8 tuổi
+  campusId  String    @map("campus_id")
+  teacherId String?   @map("teacher_id")
+  schedule  String // T3 – T5, 17:30
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  campus      Campus            @relation(fields: [campusId], references: [id])
+  teacher     User?             @relation("ClassTeacher", fields: [teacherId], references: [id])
+  students    Student[]
+  assignments AssignmentClass[]
+
+  @@index([campusId])
+  @@index([teacherId])
+  @@map("classes")
+}
+
+model Student {
+  id           String    @id @default(cuid())
+  code         String    @unique // hv001 — cũng là tên đăng nhập của bé
+  fullName     String    @map("full_name")
+  dateOfBirth  DateTime? @map("date_of_birth") @db.Date
+  classId      String    @map("class_id")
+  /// Tài khoản đăng nhập của bé.
+  userId       String    @unique @map("user_id")
+  /// Tài khoản phụ huynh (đăng nhập bằng SĐT). Anh chị em dùng chung 1 phụ huynh.
+  parentUserId String?   @map("parent_user_id")
+  parentName   String?   @map("parent_name")
+  parentPhone  String?   @map("parent_phone")
+  note         String?
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+
+  classGroup  ClassGroup   @relation(fields: [classId], references: [id])
+  user        User         @relation("StudentAccount", fields: [userId], references: [id])
+  parentUser  User?        @relation("StudentParent", fields: [parentUserId], references: [id])
+  submissions Submission[]
+
+  @@index([classId])
+  @@index([parentUserId])
+  @@map("students")
+}
+
+// ═══════════════════ BÀI TẬP ═══════════════════
+
+model Assignment {
+  id           String           @id @default(cuid())
+  title        String
+  /// Lời dặn của cô hiện trước khi bé làm bài.
+  note         String?
+  source       AssignmentSource @default(WEB)
+  sourceFile   String?          @map("source_file")
+  dueAt        DateTime         @map("due_at")
+  /// Phút. 0 = không giới hạn. Hết giờ thì bài tự nộp (câu 3).
+  timeLimitMin Int              @default(0) @map("time_limit_min")
+  /// 0 = làm lại không giới hạn.
+  maxAttempts  Int              @default(1) @map("max_attempts")
+  createdById  String           @map("created_by_id")
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+  deletedAt    DateTime?        @map("deleted_at")
+
+  createdBy   User              @relation("AssignmentAuthor", fields: [createdById], references: [id])
+  classes     AssignmentClass[]
+  questions   Question[]
+  submissions Submission[]
+
+  @@index([dueAt])
+  @@map("assignments")
+}
+
+/// Một bài giao cho nhiều lớp, ở cả 2 cơ sở.
+model AssignmentClass {
+  assignmentId String @map("assignment_id")
+  classId      String @map("class_id")
+
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  classGroup ClassGroup @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@id([assignmentId, classId])
+  @@map("assignment_classes")
+}
+
+/// Nội dung riêng của từng dạng bài nằm trong `data` (Json) — xem assignments.schema.ts
+/// (questionDataSchema) để biết hình dạng từng loại. Đáp án đúng cũng nằm trong `data`,
+/// nên KHÔNG BAO GIỜ gửi nguyên `data` xuống trình duyệt của học viên — dùng toPlayerQuestion().
+model Question {
+  id           String       @id @default(cuid())
+  assignmentId String       @map("assignment_id")
+  position     Int
+  type         QuestionType
+  skill        Skill
+  prompt       String
+  data         Json
+
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  answers    Answer[]
+
+  @@index([assignmentId, position])
+  @@map("questions")
+}
+
+/// Mỗi lần làm bài là một Submission (attempt 1, 2, …).
+model Submission {
+  id             String    @id @default(cuid())
+  assignmentId   String    @map("assignment_id")
+  studentId      String    @map("student_id")
+  attempt        Int
+  startedAt      DateTime  @map("started_at")
+  submittedAt    DateTime  @map("submitted_at")
+  durationSec    Int       @map("duration_sec")
+  autoSubmitted  Boolean   @default(false) @map("auto_submitted")
+  /// Điểm thang 10, 1 chữ số thập phân. Null khi chưa có câu nào chấm được.
+  score          Decimal?  @db.Decimal(4, 1)
+  /// Số câu nói/viết còn chờ giáo viên chấm.
+  pendingCount   Int       @default(0) @map("pending_count")
+  teacherComment String?   @map("teacher_comment")
+  gradedById     String?   @map("graded_by_id")
+  gradedAt       DateTime? @map("graded_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student    Student    @relation(fields: [studentId], references: [id])
+  gradedBy   User?      @relation("SubmissionGrader", fields: [gradedById], references: [id])
+  answers    Answer[]
+
+  @@unique([assignmentId, studentId, attempt])
+  @@index([studentId])
+  @@index([pendingCount])
+  @@map("submissions")
+}
+
+model Answer {
+  id           String  @id @default(cuid())
+  submissionId String  @map("submission_id")
+  questionId   String  @map("question_id")
+  /// Câu trả lời thô: số thứ tự đáp án, chữ, mảng từ, bảng nối, chữ bài viết…
+  value        Json?
+  /// Object key trên MinIO: file ghi âm (SPEAK) hoặc ảnh vở (WRITE).
+  fileKey      String? @map("file_key")
+  /// Tỉ lệ đúng 0–1 của câu tự chấm. Null với câu giáo viên chấm.
+  autoFraction Float?  @map("auto_fraction")
+  /// Điểm 0–10 giáo viên cho câu nói/viết. Null = chưa chấm.
+  manualScore  Int?    @map("manual_score")
+  comment      String?
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  question   Question   @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([submissionId, questionId])
+  @@map("answers")
+}
+
+/// Trung tâm gửi file Word/PDF, học vụ nhập thành bài tập (câu 2).
+model ImportRequest {
+  id           String              @id @default(cuid())
+  fileNames    String              @map("file_names")
+  fileKeys     Json                @map("file_keys")
+  classIds     Json                @map("class_ids")
+  note         String?
+  status       ImportRequestStatus @default(PENDING)
+  assignmentId String?             @map("assignment_id")
+  createdById  String              @map("created_by_id")
+  createdAt    DateTime            @default(now()) @map("created_at")
+
+  createdBy User @relation(fields: [createdById], references: [id])
+
+  @@map("import_requests")
+}
+
+// ═══════════════════ TRANG GIỚI THIỆU ═══════════════════
+
+/// Phụ huynh để lại thông tin trên trang giới thiệu (câu 8).
+model Lead {
+  id         String     @id @default(cuid())
+  parentName String     @map("parent_name")
+  phone      String
+  childAge   String?    @map("child_age")
+  course     String
+  campusId   String?    @map("campus_id")
+  callTime   String?    @map("call_time")
+  note       String?
+  status     LeadStatus @default(NEW)
+  createdAt  DateTime   @default(now()) @map("created_at")
+  updatedAt  DateTime   @updatedAt @map("updated_at")
+
+  campus Campus? @relation(fields: [campusId], references: [id])
+
+  @@index([status, createdAt])
+  @@map("leads")
+}
+
+model Post {
+  id          String    @id @default(cuid())
+  kind        PostKind
+  title       String
+  body        String
+  /// Ngày khai giảng / ngày diễn ra sự kiện.
+  eventDate   DateTime  @map("event_date")
+  campusId    String?   @map("campus_id")
+  createdById String    @map("created_by_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  campus    Campus? @relation(fields: [campusId], references: [id])
+  createdBy User    @relation(fields: [createdById], references: [id])
+
+  @@index([kind, eventDate])
+  @@map("posts")
+}
+
+// ═══════════════════ HỆ THỐNG ═══════════════════
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?  @map("actor_id")
+  action    String
+  entity    String
+  entityId  String?  @map("entity_id")
+  before    Json?
+  after     Json?
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  actor User? @relation(fields: [actorId], references: [id])
+
+  @@index([actorId, createdAt])
+  @@index([entity, entityId])
+  @@map("audit_logs")
+}

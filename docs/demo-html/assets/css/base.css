@@ -1,0 +1,107 @@
+/* GoSpeak English — design tokens & shared components */
+:root {
+  --red: #c8102e;
+  --red-deep: #8f0c21;
+  --red-soft: #fdecef;
+  --sun: #ffc53d;
+  --sun-soft: #fff4d6;
+  --ink: #1f2544;
+  --ink-2: #4a5072;
+  --ink-3: #7b819e;
+  --sky: #eaf2ff;
+  --blue: #2f6fdf;
+  --green: #1f9d63;
+  --green-soft: #e3f6ec;
+  --line: #e4e6f0;
+  --mist: #f6f7fb;
+  --paper: #ffffff;
+
+  --font-display: "Baloo 2", "Be Vietnam Pro", system-ui, sans-serif;
+  --font-body: "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --r-sm: 8px;
+  --r-md: 14px;
+  --r-lg: 24px;
+  --shadow-1: 0 1px 2px rgba(31, 37, 68, .06), 0 4px 14px rgba(31, 37, 68, .06);
+  --shadow-2: 0 10px 30px rgba(31, 37, 68, .12);
+  --wrap: 1180px;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ink);
+  background: var(--paper);
+}
+img { max-width: 100%; display: block; }
+a { color: inherit; }
+button, input, select, textarea { font: inherit; color: inherit; }
+h1, h2, h3, h4 { font-family: var(--font-display); line-height: 1.15; margin: 0 0 .5em; font-weight: 700; }
+p { margin: 0 0 1em; }
+
+:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; border-radius: 4px; }
+
+.wrap { width: min(100% - 32px, var(--wrap)); margin-inline: auto; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .5em;
+  padding: .7em 1.25em; border-radius: 999px; border: 2px solid transparent;
+  font-weight: 600; text-decoration: none; cursor: pointer; line-height: 1.2;
+  transition: transform .12s ease, background-color .15s ease, box-shadow .15s ease;
+  white-space: nowrap;
+}
+.btn:active { transform: translateY(1px); }
+.btn-primary { background: var(--red); color: #fff; box-shadow: 0 4px 0 var(--red-deep); }
+.btn-primary:hover { background: #b50e29; }
+.btn-sun { background: var(--sun); color: var(--ink); box-shadow: 0 4px 0 #d69a10; }
+.btn-sun:hover { background: #ffbb1c; }
+.btn-ghost { background: transparent; border-color: currentColor; }
+.btn-light { background: #fff; color: var(--ink); border-color: var(--line); }
+.btn-light:hover { border-color: var(--ink-3); }
+.btn-green { background: var(--green); color: #fff; box-shadow: 0 4px 0 #157049; }
+.btn-sm { padding: .45em .9em; font-size: .9rem; }
+.btn-lg { padding: .9em 1.6em; font-size: 1.08rem; }
+.btn[disabled] { opacity: .5; cursor: not-allowed; }
+
+/* Forms */
+.field { display: grid; gap: 6px; margin-bottom: 14px; }
+.field > span, .field > label { font-weight: 600; font-size: .92rem; }
+.input, select.input, textarea.input {
+  width: 100%; padding: .7em .9em; border: 1.5px solid var(--line); border-radius: var(--r-sm);
+  background: #fff; transition: border-color .15s;
+}
+.input:focus { border-color: var(--blue); outline: none; box-shadow: 0 0 0 3px rgba(47, 111, 223, .15); }
+textarea.input { min-height: 110px; resize: vertical; }
+.hint { font-size: .85rem; color: var(--ink-3); }
+
+/* Brand wordmark */
+.brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; }
+.brand-mark {
+  width: 42px; height: 42px; border-radius: 12px; background: var(--red);
+  display: grid; place-items: center; flex: none;
+}
+.brand-mark img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+.brand-name { font-family: var(--font-display); font-weight: 800; font-size: 1.35rem; line-height: 1; letter-spacing: -.01em; }
+.brand-name small { display: block; font-family: var(--font-body); font-size: .68rem; font-weight: 600; color: var(--ink-3); letter-spacing: .02em; margin-top: 3px; }
+
+/* Toast */
+.toast-host { position: fixed; z-index: 999; left: 50%; bottom: 24px; transform: translateX(-50%); display: grid; gap: 8px; width: min(92vw, 420px); }
+.toast { background: var(--ink); color: #fff; padding: 12px 16px; border-radius: 12px; box-shadow: var(--shadow-2); animation: toast-in .25s ease; }
+.toast.ok { background: var(--green); }
+.toast.err { background: var(--red); }
+@keyframes toast-in { from { opacity: 0; transform: translateY(10px); } }
+
+.demo-ribbon {
+  background: var(--ink); color: #fff; font-size: .82rem; text-align: center; padding: 6px 16px;
+}
+.demo-ribbon a { color: var(--sun); font-weight: 600; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}

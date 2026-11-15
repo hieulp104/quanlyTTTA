@@ -1,0 +1,47 @@
+# GoSpeak — hạ tầng phát triển (Postgres + MinIO)
+# Dùng: docker compose up -d
+# Cổng lệch khỏi mặc định để không đụng các dự án khác trên máy dev (xem CLAUDE.md mục 2).
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: gospeak-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gospeak
+      POSTGRES_PASSWORD: gospeak_dev_password
+      POSTGRES_DB: gospeak
+      TZ: Asia/Ho_Chi_Minh
+    ports:
+      - "5436:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gospeak -d gospeak"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
+    container_name: gospeak-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: gospeak
+      MINIO_ROOT_PASSWORD: gospeak_dev_password
+      TZ: Asia/Ho_Chi_Minh
+    ports:
+      - "9300:9000" # API S3
+      - "9301:9001" # Console web
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  minio_data:

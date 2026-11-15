@@ -1,0 +1,5 @@
+@import "tailwindcss";
+@import "../components/theme/tokens/index.css";
+@import "../components/theme/themes/gospeak/base.css";
+@import "../components/theme/themes/gospeak/classic/light/theme.css";
+@import "../components/theme/themes/gospeak/classic/dark/theme.css";

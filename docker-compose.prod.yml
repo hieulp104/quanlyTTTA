@@ -1,0 +1,120 @@
+# GoSpeak — chạy trên server (VPS). Cấu hình đọc từ file .env cùng thư mục.
+# Lần đầu và mỗi lần cập nhật đều chỉ cần:
+#   git pull && docker compose -f docker-compose.prod.yml up -d --build
+# (dịch vụ migrate tự cập nhật bảng trước khi app khởi động). Hướng dẫn: deploy/README.md
+#
+# Chỉ Caddy mở cổng ra internet (80, 443). Postgres, MinIO, app nói chuyện qua mạng nội bộ Docker.
+
+services:
+  caddy:
+    image: caddy:2.10-alpine
+    container_name: gospeak-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN}
+      FILES_DOMAIN: ${FILES_DOMAIN}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+      - minio
+
+  app:
+    build:
+      context: .
+      target: runner
+    image: gospeak-app
+    container_name: gospeak-app
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://gospeak:${POSTGRES_PASSWORD}@postgres:5432/gospeak?schema=public
+      AUTH_SECRET: ${AUTH_SECRET}
+      AUTH_URL: https://${APP_DOMAIN}
+      AUTH_TRUST_HOST: "true"
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: "9000"
+      MINIO_USE_SSL: "false"
+      MINIO_ACCESS_KEY: gospeak
+      MINIO_SECRET_KEY: ${MINIO_PASSWORD}
+      MINIO_BUCKET: gospeak-files
+      MINIO_PUBLIC_URL: https://${FILES_DOMAIN}
+      DEMO_ACCOUNTS: ${DEMO_ACCOUNTS:-false}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-123456}
+      TZ: Asia/Ho_Chi_Minh
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  # Cập nhật bảng theo prisma/migrations rồi thoát — chạy tự động mỗi lần `up`, app chờ bước này xong.
+  # Dữ liệu demo (chạy MỘT lần sau lần triển khai đầu):
+  #   docker compose -f docker-compose.prod.yml run --rm migrate npm run db:seed
+  migrate:
+    build:
+      context: .
+      target: tools
+    image: gospeak-tools
+    container_name: gospeak-migrate
+    command: ["npx", "prisma", "migrate", "deploy"]
+    restart: "no"
+    environment:
+      DATABASE_URL: postgresql://gospeak:${POSTGRES_PASSWORD}@postgres:5432/gospeak?schema=public
+      SEED_DEFAULT_PASSWORD: ${DEMO_PASSWORD:-123456}
+      TZ: Asia/Ho_Chi_Minh
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: gospeak-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gospeak
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: gospeak
+      TZ: Asia/Ho_Chi_Minh
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gospeak -d gospeak"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
+    container_name: gospeak-minio
+    restart: unless-stopped
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: gospeak
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD}
+      MINIO_REGION: us-east-1
+      TZ: Asia/Ho_Chi_Minh
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  minio_data:
+  caddy_data:
+  caddy_config:
